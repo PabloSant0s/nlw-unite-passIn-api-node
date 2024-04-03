@@ -2,13 +2,13 @@ POST http://localhost:3333/events
 Content-Type: application/json
 
 {
-  "title": "Submit Unit",
+  "title": "Unite Summit",
   "details": null,
   "maximumAttendees": 1
 }
 
 ###
-POST http://localhost:3333/events/300cc644-e94c-4353-95c8-07e8f914626d/attendees
+POST http://localhost:3333/events/9e9bd979-9d10-4915-b339-3786b16634f33/attendees
 Content-Type: application/json
 
 {
@@ -17,9 +17,17 @@ Content-Type: application/json
 }
 
 ###
-GET http://localhost:3333/events/300cc644-e94c-4353-95c8-07e8f914626d
+GET http://localhost:3333/events/9e9bd979-9d10-4915-b339-3786b16634f33
 Content-Type: application/json
 
 ###
 GET http://localhost:3333/attendees/2/badge
+Content-Type: application/json
+
+###
+GET http://localhost:3333/attendees/2/check-in
+Content-Type: application/json
+
+###
+GET http://localhost:3333/events/9e9bd979-9d10-4915-b339-3786b16634f33/attendees
 Content-Type: application/json
