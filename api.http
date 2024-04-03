@@ -2,7 +2,24 @@ POST http://localhost:3333/events
 Content-Type: application/json
 
 {
-  "title": "NLW Unit",
-  "details": "Um evento de programação",
-  "maximumAttendees": 100
+  "title": "Submit Unit",
+  "details": null,
+  "maximumAttendees": 1
 }
+
+###
+POST http://localhost:3333/events/300cc644-e94c-4353-95c8-07e8f914626d/attendees
+Content-Type: application/json
+
+{
+  "name": "Pablo Santos",
+  "email": "pablorasantos.dev2@gmail.com"
+}
+
+###
+GET http://localhost:3333/events/300cc644-e94c-4353-95c8-07e8f914626d
+Content-Type: application/json
+
+###
+GET http://localhost:3333/attendees/2/badge
+Content-Type: application/json

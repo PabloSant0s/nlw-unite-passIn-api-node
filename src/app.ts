@@ -1,8 +1,10 @@
 import fastify from "fastify";
 import cors from '@fastify/cors'
-import { ZodError, z } from "zod";
-import { env } from "./env";
-import { prisma } from "./database/prisma-client";
+import {serializerCompiler, validatorCompiler, ZodTypeProvider} from 'fastify-type-provider-zod'
+import { createEvent,  } from "./routes/create-event";
+import { registerForEvent } from "./routes/register-for-event";
+import { getEvent } from "./routes/get-event";
+import { getAttendeeBadge } from "./routes/get-attendee-badge";
 
 export const app = fastify()
 
@@ -10,41 +12,26 @@ app.register(cors, {
   origin: '*'
 })
 
-app.post('/events', async(req, rep)=>{
-  const bodySchema = z.object({
-    title: z.string().min(4),
-    details: z.string().nullable(),
-    maximumAttendees: z.number().int().positive().nullable()
-  })
+app.setValidatorCompiler(validatorCompiler)
+app.setSerializerCompiler(serializerCompiler)
 
-  const { details, title, maximumAttendees } = bodySchema.parse(req.body)
+app.register(createEvent)
+app.register(registerForEvent)
+app.register(getEvent)
+app.register(getAttendeeBadge)
 
-  const event = await prisma.event.create({
-    data:{
-      title,
-      details,
-      maximumAttendees,
-      slug: new Date().toISOString()
-    }
-  })
+// app.setErrorHandler((error, _, reply) => {
+//   if (error instanceof ZodError) {
+//     return reply
+//       .status(400)
+//       .send({ message: 'Validation Errors', issues: error.format() })
+//   }
 
-  return rep.status(201).send({
-    eventId: event.id
-  })
-})
+//   if (env.NODE_ENV !== 'production') {
+//     console.error(error)
+//   } else {
+//     // TODO: Here we should log to on external tool like DataDog/NewRelic/Sentry
+//   }
 
-app.setErrorHandler((error, _, reply) => {
-  if (error instanceof ZodError) {
-    return reply
-      .status(400)
-      .send({ message: 'Validation Errors', issues: error.format() })
-  }
-
-  if (env.NODE_ENV !== 'production') {
-    console.error(error)
-  } else {
-    // TODO: Here we should log to on external tool like DataDog/NewRelic/Sentry
-  }
-
-  return reply.status(500).send({ message: 'Insternal Server Error.' })
-})
+//   return reply.status(500).send({ message: 'Insternal Server Error.' })
+// })
