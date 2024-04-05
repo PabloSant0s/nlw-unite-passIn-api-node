@@ -1,67 +1,62 @@
-import { ZodTypeProvider } from 'fastify-type-provider-zod';
-import { FastifyInstance } from "fastify";
-import { z } from 'zod';
-import { prisma } from '../database/prisma-client';
-import { BadRequestError } from './_errors/bad-request';
+import { ResourceNotFoundError } from '@/core/domain/errors/resource-not-found-error'
+import { AttendeeAlreadyExistsError } from '@/domain/application/use-cases/errors/attendee-already-exists-error'
+import { makeRegisterForEvent } from '@/factories/make-register-for-event'
+import { FastifyInstance } from 'fastify'
+import { ZodTypeProvider } from 'fastify-type-provider-zod'
+import { z } from 'zod'
+import { BadRequestError } from './_errors/bad-request'
 
-export async function registerForEvent(app:FastifyInstance) {
-  app.withTypeProvider<ZodTypeProvider>().post('/events/:eventId/attendees', {
-    schema: {
-      tags: ['attendees'],
-      summary: 'Register an attendee',
-      body: z.object({
-        name: z.string().min(4),
-        email: z.string().email()
-      }),
-      params: z.object({
-        eventId: z.string().uuid()
-      }),
-      response:{
-        201: z.object({
-          attendeeId: z.number()
-        })
-      }
-    }
-  }, async (request, reply)=>{
-    const { eventId } = request.params
-    const { name, email} = request.body
+export async function registerForEvent(app: FastifyInstance) {
+  app.withTypeProvider<ZodTypeProvider>().post(
+    '/events/:eventId/attendees',
+    {
+      schema: {
+        tags: ['attendees'],
+        summary: 'Register an attendee',
+        body: z.object({
+          name: z.string().min(4),
+          email: z.string().email(),
+        }),
+        params: z.object({
+          eventId: z.string().uuid(),
+        }),
+        response: {
+          201: z.object({
+            attendeeId: z.number(),
+          }),
+        },
+      },
+    },
+    async (request, reply) => {
+      const { eventId } = request.params
+      const { name, email } = request.body
 
-    const attendeeFromEmail = await prisma.attendee.findUnique({
-      where:{
-        eventId_email:{
-          eventId,
-          email
-        }
-      }
-    })
+      const registerForEventUseCase = makeRegisterForEvent()
 
-    if(attendeeFromEmail) throw new BadRequestError('This e-mail is already registered for this event.')
-
-    const [event, amountOfAttendeesForEvent] = await Promise.all([
-      prisma.event.findUnique({
-        where:{
-          id: eventId
-        }
-      }),
-      prisma.attendee.count({
-        where:{
-          eventId
-        }
+      const result = await registerForEventUseCase.execute({
+        email,
+        eventId,
+        name,
       })
-    ])
 
-    if(!event) throw new BadRequestError('Event not found')
-
-    if(event.maximumAttendees && amountOfAttendeesForEvent >= event.maximumAttendees) throw new Error('The maximum number of attendees for this event has been reached.')
-
-    const attendee = await prisma.attendee.create({
-      data:{
-        name, email, eventId
+      if (result.isLeft()) {
+        const error = result.value
+        console.log(error)
+        switch (error.constructor) {
+          case ResourceNotFoundError:
+            throw new BadRequestError(error.message)
+          case AttendeeAlreadyExistsError:
+            throw new BadRequestError(error.message)
+          default:
+            throw new Error('Internal Server Error')
+        }
       }
-    })
 
-    return reply.status(201).send({
-      attendeeId: attendee.id
-    })
-  })
+      const { attendee } = result.value
+
+      return reply.status(201).send({
+        attendeeId: attendee.id,
+      })
+    },
+  )
 }

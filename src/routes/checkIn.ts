@@ -1,39 +1,45 @@
-import { FastifyInstance } from "fastify";
-import { ZodTypeProvider } from "fastify-type-provider-zod";
-import z from "zod";
-import { prisma } from "../database/prisma-client";
-import { BadRequestError } from "./_errors/bad-request";
+import { FastifyInstance } from 'fastify'
+import { ZodTypeProvider } from 'fastify-type-provider-zod'
+import z from 'zod'
+import { BadRequestError } from './_errors/bad-request'
+import { makeCheckIn } from '@/factories/make-checkIn'
+import { CheckInAlreadyCheckedError } from '@/domain/application/use-cases/errors/checkIn-already-checked-error'
 
-export async function checkIn(app:FastifyInstance) {
-  app.withTypeProvider<ZodTypeProvider>().get('/attendees/:attendeeId/check-in', {
-    schema:{
-      tags: ['check-ins'],
-      summary: 'Check-in an attendee',
-      params: z.object({
-        attendeeId: z.coerce.number()
-      }),
-      response:{
-        201: z.null()
+export async function checkIn(app: FastifyInstance) {
+  app.withTypeProvider<ZodTypeProvider>().get(
+    '/attendees/:attendeeId/check-in',
+    {
+      schema: {
+        tags: ['check-ins'],
+        summary: 'Check-in an attendee',
+        params: z.object({
+          attendeeId: z.coerce.number(),
+        }),
+        response: {
+          201: z.null(),
+        },
+      },
+    },
+    async (request, reply) => {
+      const { attendeeId } = request.params
+
+      const checkInUseCase = makeCheckIn()
+
+      const result = await checkInUseCase.execute({
+        attendeeId,
+      })
+
+      if (result.isLeft()) {
+        const error = result.value
+        switch (error.constructor) {
+          case CheckInAlreadyCheckedError:
+            throw new BadRequestError(error.message)
+          default:
+            throw new Error('Internal Server Error')
+        }
       }
-    }
-  }, async(request, reply)=>{
-    const {attendeeId} = request.params
 
-    const attendeeCheckIn = await prisma.checkIn.findUnique({
-      where:{
-        attendeeId
-      }
-    })
-
-    if(attendeeCheckIn) throw new BadRequestError('Attendee already checked in!')
-
-
-    await prisma.checkIn.create({
-      data:{
-        attendeeId
-      }
-    })
-
-    return reply.status(201).send()
-  })
+      return reply.status(201).send()
+    },
+  )
 }
