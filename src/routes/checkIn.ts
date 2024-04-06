@@ -4,6 +4,7 @@ import z from 'zod'
 import { BadRequestError } from './_errors/bad-request'
 import { makeCheckIn } from '@/factories/make-checkIn'
 import { CheckInAlreadyCheckedError } from '@/domain/application/use-cases/errors/checkIn-already-checked-error'
+import { ResourceNotFoundError } from '@/core/domain/errors/resource-not-found-error'
 
 export async function checkIn(app: FastifyInstance) {
   app.withTypeProvider<ZodTypeProvider>().get(
@@ -33,6 +34,8 @@ export async function checkIn(app: FastifyInstance) {
         const error = result.value
         switch (error.constructor) {
           case CheckInAlreadyCheckedError:
+            throw new BadRequestError(error.message)
+          case ResourceNotFoundError:
             throw new BadRequestError(error.message)
           default:
             throw new Error('Internal Server Error')
