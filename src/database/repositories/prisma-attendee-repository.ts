@@ -21,6 +21,16 @@ export class PrismaAttendeeRepository implements AttendeeRepository {
     return PrismaAttendeeMapper.toDomain(attendeeOnDatabase)
   }
 
+  async findById(id: number): Promise<Attendee | null> {
+    const attendee = await this.prisma.attendee.findUnique({
+      where: { id },
+    })
+
+    if (!attendee) return null
+
+    return PrismaAttendeeMapper.toDomain(attendee)
+  }
+
   async countByEventId(eventId: string): Promise<number> {
     const count = await this.prisma.attendee.count({
       where: {

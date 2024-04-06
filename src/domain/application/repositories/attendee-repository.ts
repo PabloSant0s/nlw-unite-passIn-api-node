@@ -10,6 +10,7 @@ export interface FindManyWithCheckInByEventIdParams extends PaginatorParams {
 
 export interface AttendeeRepository {
   create(attendee: Attendee): Promise<Attendee>
+  findById(id: number): Promise<Attendee | null>
   countByEventId(eventId: string): Promise<number>
   findWithEventById(id: number): Promise<AttendeeWithEvent | null>
   findByEmailAndEventId(
